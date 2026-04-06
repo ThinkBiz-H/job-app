@@ -437,7 +437,8 @@ import '../utils/user_session.dart';
 import 'EditProfileScreen.dart';
 import 'applied_jobs_screen.dart';
 import 'package:http/http.dart' as http;
-import 'dart:html' as html;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -497,14 +498,17 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void openLocalResume() async {
-    if (pickedFile == null) return;
-    final bytes = pickedFile!.bytes;
-    if (bytes != null) {
-      final blob = html.Blob([bytes]);
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      html.window.open(url, "_blank");
-    }
+  if (pickedFile == null) return;
+
+  final bytes = pickedFile!.bytes;
+  if (bytes != null) {
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/${pickedFile!.name}');
+    await file.writeAsBytes(bytes);
+
+    await OpenFile.open(file.path);
   }
+}
 
   Future<void> uploadResume() async {
     final token = UserSession.user?["token"];
