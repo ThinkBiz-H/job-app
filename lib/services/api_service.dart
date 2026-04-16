@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl =
-      "https://job-portal-fullstack-production.up.railway.app/api ";
+  static const String baseUrl = "http://192.168.1.16:5000/api";
 
   /* ================= COMMON HEADERS ================= */
   static Map<String, String> _headers({String? token}) {
@@ -150,5 +149,33 @@ class ApiService {
     }
 
     return null;
+  }
+
+  /* ================= UPDATE PROFILE ================= */
+  static Future<bool> updateProfile({
+    required String token,
+    Map<String, dynamic>? body,
+  }) async {
+    try {
+      final url = Uri.parse("$baseUrl/auth/update-jobseeker-profile");
+
+      final res = await http.put(
+        url,
+        headers: _headers(token: token),
+        body: jsonEncode(body),
+      );
+
+      print("UPDATE PROFILE STATUS: ${res.statusCode}");
+      print("UPDATE PROFILE BODY: ${res.body}");
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data["success"] == true;
+      }
+    } catch (e) {
+      print("❌ UPDATE PROFILE ERROR: $e");
+    }
+
+    return false;
   }
 }

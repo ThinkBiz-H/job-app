@@ -1,387 +1,3 @@
-// import 'package:flutter/material.dart';
-// import '../services/api_service.dart';
-// import 'dart:convert';
-// import 'package:http/http.dart' as http;
-// import '../utils/user_session.dart';
-
-// class JobDetailScreen extends StatefulWidget {
-//   final Map<String, dynamic> job;
-
-//   const JobDetailScreen({super.key, required this.job});
-
-//   @override
-//   State<JobDetailScreen> createState() => _JobDetailScreenState();
-// }
-
-// class _JobDetailScreenState extends State<JobDetailScreen> {
-//   Map<String, dynamic> job = {};
-//   bool isLoading = true;
-//   bool applying = false;
-//   bool hasApplied = false;
-//   bool showQuestions = false;
-//   bool isSubmittingAnswers = false;
-//   Map answers = {};
-//   @override
-//   void initState() {
-//     super.initState();
-//     checkIfApplied(); // 🔥 pehle ye
-//     fetchJobDetail();
-//   }
-
-//   String salaryText() {
-//     final s = job['salary'];
-//     if (s == null) return "";
-//     return "₹ ${s['min']} - ₹ ${s['max']}";
-//   }
-
-//   Widget sectionTitle(String text) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: 10),
-//       child: Text(
-//         text,
-//         style: const TextStyle(
-//           fontSize: 16,
-//           fontWeight: FontWeight.bold,
-//           color: Colors.black, // 🔥 force black
-//         ),
-//       ),
-//     );
-//   }
-
-//   Future<void> handleApply() async {
-//     final token = UserSession.user?["token"];
-
-//     if (token == null) {
-//       ScaffoldMessenger.of(
-//         context,
-//       ).showSnackBar(const SnackBar(content: Text("Login first ❌")));
-//       return;
-//     }
-
-//     // Screening questions check
-//     if ((job["screeningQuestions"] ?? []).isNotEmpty && !isSubmittingAnswers) {
-//       setState(() => showQuestions = true);
-//       return;
-//     }
-
-//     try {
-//       setState(() => applying = true);
-
-//       final formattedAnswers = answers.entries.map((e) {
-//         return {"questionId": e.key, "answer": e.value};
-//       }).toList();
-
-//       final res = await http.post(
-//         Uri.parse("https://job-portal-fullstack-production.up.railway.app/api/api/jobs/${job["_id"]}/apply"),
-//         headers: {
-//           "Authorization": "Bearer $token",
-//           "Content-Type": "application/json",
-//         },
-//         body: jsonEncode({"answers": formattedAnswers}),
-//       );
-
-//       print("STATUS: ${res.statusCode}");
-//       print("BODY: ${res.body}");
-
-//       final data = jsonDecode(res.body);
-
-//       // 🔥 MAIN FIX HERE
-//       if (data["success"] == true || data["message"] == "Already applied") {
-//         setState(() => hasApplied = true);
-
-//         ScaffoldMessenger.of(context).showSnackBar(
-//           SnackBar(content: Text(data["message"] ?? "🎉 Applied Successfully")),
-//         );
-//       } else {
-//         // optional error
-//         ScaffoldMessenger.of(context).showSnackBar(
-//           SnackBar(content: Text(data["message"] ?? "Something went wrong ❌")),
-//         );
-//       }
-//     } catch (e) {
-//       print("ERROR: $e");
-
-//       ScaffoldMessenger.of(
-//         context,
-//       ).showSnackBar(const SnackBar(content: Text("Server error ❌")));
-//     } finally {
-//       setState(() {
-//         applying = false;
-//         isSubmittingAnswers = false;
-//       });
-//     }
-//   }
-
-//   Future<void> checkIfApplied() async {
-//     final token = UserSession.user?["token"];
-
-//     if (token == null) return;
-
-//     final res = await http.get(
-//       Uri.parse("https://job-portal-fullstack-production.up.railway.app/api/api/jobs/my-applications"),
-//       headers: {"Authorization": "Bearer $token"},
-//     );
-
-//     final data = jsonDecode(res.body);
-
-//     final appliedJobs = data["data"] ?? [];
-
-//     bool found = appliedJobs.any((app) {
-//       return app["job"]["_id"].toString() == widget.job["_id"].toString();
-//     });
-
-//     if (found) {
-//       setState(() => hasApplied = true);
-//     }
-//   }
-
-//   Future<void> fetchJobDetail() async {
-//     try {
-//       final id = widget.job["_id"];
-//       final data = await ApiService.getJobById(id);
-
-//       job = data ?? widget.job;
-
-//       setState(() {
-//         isLoading = false;
-//       });
-//     } catch (e) {
-//       print("ERROR: $e");
-
-//       setState(() {
-//         isLoading = false;
-//       });
-//     }
-//   }
-
-//   Widget bullet(List? list) {
-//     if (list == null) return const SizedBox();
-//     return Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: list
-//           .map((e) => Text("• $e", style: const TextStyle(color: Colors.black)))
-//           .toList(),
-//     );
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     if (isLoading) {
-//       return const Scaffold(body: Center(child: CircularProgressIndicator()));
-//     }
-
-//     return Scaffold(
-//       backgroundColor: Colors.grey[100],
-
-//       appBar: AppBar(
-//         backgroundColor: Colors.white,
-//         elevation: 0,
-//         leading: const BackButton(color: Colors.black),
-//         actions: const [
-//           Icon(Icons.share, color: Colors.green),
-//           SizedBox(width: 10),
-//         ],
-//       ),
-
-//       // 🔥 FULL SCREEN TEXT BLACK
-//       body: Stack(
-//         children: [
-//           DefaultTextStyle(
-//             style: const TextStyle(color: Colors.black),
-//             child: SingleChildScrollView(
-//               padding: const EdgeInsets.all(16),
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   // ================= TOP =================
-//                   Text(
-//                     job['title'],
-//                     style: const TextStyle(
-//                       fontSize: 20,
-//                       fontWeight: FontWeight.bold,
-//                       color: Colors.black,
-//                     ),
-//                   ),
-//                   const SizedBox(height: 6),
-//                   Text(job['company']),
-//                   const SizedBox(height: 6),
-//                   Text("📍 ${job['location']}"),
-//                   const SizedBox(height: 6),
-//                   Text("💰 ${salaryText()} monthly"),
-
-//                   const SizedBox(height: 16),
-
-//                   // Salary Card
-//                   Container(
-//                     padding: const EdgeInsets.all(12),
-//                     decoration: BoxDecoration(
-//                       color: Colors.grey.shade200,
-//                       borderRadius: BorderRadius.circular(10),
-//                     ),
-//                     child: Column(
-//                       children: [row("Annual LPA", "${salaryText()} LPA")],
-//                     ),
-//                   ),
-
-//                   const SizedBox(height: 10),
-
-//                   // Chips
-//                   Wrap(
-//                     children: [
-//                       chip("Work from Office"),
-//                       chip("Full Time"),
-//                       chip("Any experience"),
-//                     ],
-//                   ),
-
-//                   const SizedBox(height: 16),
-
-//                   // Highlights
-//                   Container(
-//                     padding: const EdgeInsets.all(12),
-//                     decoration: BoxDecoration(
-//                       border: Border.all(color: Colors.blue.shade100),
-//                       borderRadius: BorderRadius.circular(10),
-//                     ),
-//                     child: const Column(
-//                       crossAxisAlignment: CrossAxisAlignment.start,
-//                       children: [
-//                         Text(
-//                           "Job highlights",
-//                           style: TextStyle(
-//                             fontWeight: FontWeight.bold,
-//                             color: Colors.black,
-//                           ),
-//                         ),
-//                         SizedBox(height: 8),
-//                         Text("🔥 Urgently hiring"),
-//                         Text("⚡ Fast HR reply"),
-//                       ],
-//                     ),
-//                   ),
-
-//                   // ================= DETAILS =================
-//                   sectionTitle("Job description"),
-//                   Text(job['description'] ?? ""),
-
-//                   sectionTitle("Experience"),
-//                   Text("${job['experience']?['min']} yrs"),
-
-//                   sectionTitle("Job role"),
-//                   const Text("Software Development"),
-
-//                   sectionTitle("Skills"),
-//                   bullet(job['skillsRequired']),
-
-//                   sectionTitle("Responsibilities"),
-//                   bullet(job['responsibilities']),
-
-//                   sectionTitle("Requirements"),
-//                   bullet(job['requirements']),
-
-//                   const SizedBox(height: 20),
-
-//                   // ================= COMPANY =================
-//                   sectionTitle("About company"),
-//                   Text("Name: ${job['company']}"),
-//                   const SizedBox(height: 6),
-//                   Text("Location: ${job['location']}"),
-
-//                   const SizedBox(height: 80),
-//                 ],
-//               ),
-//             ),
-//           ),
-//           if (showQuestions)
-//             Container(
-//               color: Colors.black54,
-//               child: Center(
-//                 child: Container(
-//                   padding: const EdgeInsets.all(16),
-//                   margin: const EdgeInsets.all(20),
-//                   color: Colors.white,
-//                   child: Column(
-//                     mainAxisSize: MainAxisSize.min,
-//                     children: [
-//                       const Text("Answer Questions"),
-
-//                       ...(job["screeningQuestions"] ?? []).map((q) {
-//                         return TextField(
-//                           decoration: InputDecoration(labelText: q["question"]),
-//                           onChanged: (v) => answers[q["_id"]] = v,
-//                         );
-//                       }),
-
-//                       ElevatedButton(
-//                         onPressed: () {
-//                           setState(() {
-//                             showQuestions = false;
-//                             isSubmittingAnswers = true; // 🔥 IMPORTANT
-//                           });
-//                           handleApply();
-//                         },
-//                         child: const Text("Submit"),
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//             ),
-//         ],
-//       ),
-
-//       // ================= APPLY BUTTON =================
-//       bottomNavigationBar: Container(
-//         padding: const EdgeInsets.all(12),
-//         color: Colors.white,
-//         child: ElevatedButton(
-//           style: ElevatedButton.styleFrom(
-//             backgroundColor: Colors.green,
-//             padding: const EdgeInsets.all(14),
-//           ),
-//           onPressed: applying || hasApplied ? null : handleApply,
-//           child: hasApplied
-//               ? const Text("Applied ✅", style: TextStyle(color: Colors.white))
-//               : applying
-//               ? const CircularProgressIndicator(color: Colors.white)
-//               : const Text(
-//                   "Apply for job",
-//                   style: TextStyle(color: Colors.white),
-//                 ),
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget row(String title, String value) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: 6),
-//       child: Row(
-//         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//         children: [
-//           Text(title, style: const TextStyle(color: Colors.black)),
-//           Text(value, style: const TextStyle(color: Colors.black)),
-//         ],
-//       ),
-//     );
-//   }
-
-//   Widget chip(String text) {
-//     return Container(
-//       margin: const EdgeInsets.only(right: 8, bottom: 8),
-//       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-//       decoration: BoxDecoration(
-//         color: Colors.grey.shade300,
-//         borderRadius: BorderRadius.circular(20),
-//       ),
-//       child: Text(
-//         text,
-//         style: const TextStyle(color: Colors.black), // 🔥 fix
-//       ),
-//     );
-//   }
-// }
-
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'dart:convert';
@@ -476,9 +92,7 @@ class _JobDetailScreenState extends State<JobDetailScreen>
       }).toList();
 
       final res = await http.post(
-        Uri.parse(
-          "https://job-portal-fullstack-production.up.railway.app/api/jobs/${job["_id"]}/apply",
-        ),
+        Uri.parse("${ApiService.baseUrl}/jobs/${job["_id"]}/apply"),
         headers: {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",
@@ -517,9 +131,7 @@ class _JobDetailScreenState extends State<JobDetailScreen>
 
     try {
       final res = await http.get(
-        Uri.parse(
-          "https://job-portal-fullstack-production.up.railway.app/api/jobs/my-applications",
-        ),
+        Uri.parse("${ApiService.baseUrl}/jobs/my-applications"),
         headers: {"Authorization": "Bearer $token"},
       );
 
@@ -1160,85 +772,147 @@ class _JobDetailScreenState extends State<JobDetailScreen>
     );
   }
 
+  // Widget _buildApplyButton() {
+  //   return Container(
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: BoxDecoration(
+  //       color: const Color(0xFF1A1F3F),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withOpacity(0.3),
+  //           blurRadius: 20,
+  //           offset: const Offset(0, -5),
+  //         ),
+  //       ],
+  //     ),
+  //     child: SafeArea(
+  //       child: AnimatedContainer(
+  //         duration: const Duration(milliseconds: 200),
+  //         width: double.infinity,
+  //         height: 56,
+  //         decoration: BoxDecoration(
+  //           gradient: hasApplied
+  //               ? LinearGradient(
+  //                   colors: [Colors.grey.shade700, Colors.grey.shade600],
+  //                 )
+  //               : const LinearGradient(
+  //                   colors: [Color(0xFF00D68F), Color(0xFF00875A)],
+  //                 ),
+  //           borderRadius: BorderRadius.circular(16),
+  //           boxShadow: (applying || hasApplied)
+  //               ? null
+  //               : [
+  //                   BoxShadow(
+  //                     color: const Color(0xFF00D68F).withOpacity(0.4),
+  //                     blurRadius: 15,
+  //                     offset: const Offset(0, 5),
+  //                   ),
+  //                 ],
+  //         ),
+  //         child: ElevatedButton(
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: Colors.transparent,
+  //             shadowColor: Colors.transparent,
+  //             shape: RoundedRectangleBorder(
+  //               borderRadius: BorderRadius.circular(16),
+  //             ),
+  //           ),
+  //           onPressed: (applying || hasApplied) ? null : handleApply,
+  //           child: hasApplied
+  //               ? const Row(
+  //                   mainAxisAlignment: MainAxisAlignment.center,
+  //                   children: [
+  //                     Icon(Icons.check_circle, color: Colors.white, size: 20),
+  //                     SizedBox(width: 8),
+  //                     Text(
+  //                       "Applied Successfully",
+  //                       style: TextStyle(
+  //                         fontSize: 16,
+  //                         fontWeight: FontWeight.w600,
+  //                         color: Colors.white,
+  //                       ),
+  //                     ),
+  //                   ],
+  //                 )
+  //               : applying
+  //               ? const SizedBox(
+  //                   width: 24,
+  //                   height: 24,
+  //                   child: CircularProgressIndicator(
+  //                     strokeWidth: 2.5,
+  //                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+  //                   ),
+  //                 )
+  //               : const Text(
+  //                   "Apply Now",
+  //                   style: TextStyle(
+  //                     fontSize: 16,
+  //                     fontWeight: FontWeight.w600,
+  //                     color: Colors.white,
+  //                     letterSpacing: 0.5,
+  //                   ),
+  //                 ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
   Widget _buildApplyButton() {
+    // 👇 agar already applied hai to button ki jagah text dikhao
+    if (hasApplied) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        color: const Color(0xFF1A1F3F),
+        child: SafeArea(
+          child: Container(
+            height: 56,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.green),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.check_circle, color: Colors.green),
+                SizedBox(width: 8),
+                Text(
+                  "Already Applied",
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 👇 normal apply button
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1F3F),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
+      decoration: const BoxDecoration(color: Color(0xFF1A1F3F)),
       child: SafeArea(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+        child: SizedBox(
           width: double.infinity,
           height: 56,
-          decoration: BoxDecoration(
-            gradient: hasApplied
-                ? LinearGradient(
-                    colors: [Colors.grey.shade700, Colors.grey.shade600],
-                  )
-                : const LinearGradient(
-                    colors: [Color(0xFF00D68F), Color(0xFF00875A)],
-                  ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: (applying || hasApplied)
-                ? null
-                : [
-                    BoxShadow(
-                      color: const Color(0xFF00D68F).withOpacity(0.4),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-          ),
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
+              backgroundColor: const Color(0xFF00D68F),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            onPressed: (applying || hasApplied) ? null : handleApply,
-            child: hasApplied
-                ? const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        "Applied Successfully",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  )
-                : applying
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
+            onPressed: applying ? null : handleApply,
+            child: applying
+                ? const CircularProgressIndicator(color: Colors.white)
                 : const Text(
                     "Apply Now",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
           ),
         ),

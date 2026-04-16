@@ -498,17 +498,17 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void openLocalResume() async {
-  if (pickedFile == null) return;
+    if (pickedFile == null) return;
 
-  final bytes = pickedFile!.bytes;
-  if (bytes != null) {
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/${pickedFile!.name}');
-    await file.writeAsBytes(bytes);
+    final bytes = pickedFile!.bytes;
+    if (bytes != null) {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/${pickedFile!.name}');
+      await file.writeAsBytes(bytes);
 
-    await OpenFile.open(file.path);
+      await OpenFile.open(file.path);
+    }
   }
-}
 
   Future<void> uploadResume() async {
     final token = UserSession.user?["token"];
@@ -522,9 +522,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     try {
       var request = http.MultipartRequest(
         "POST",
-        Uri.parse(
-          "https://job-portal-fullstack-production.up.railway.app/api/users/upload-resume",
-        ),
+        Uri.parse("http://192.168.1.16:5000/api/auth/upload-resume"),
       );
 
       request.headers["Authorization"] = "Bearer $token";
@@ -543,6 +541,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (data["success"] == true) {
         setState(() {
           UserSession.user?["resume"] = data["resume"];
+          UserSession.user?["resumeOriginalName"] = data["originalName"];
           pickedFile = null;
         });
         _showSnackBar("Resume Uploaded Successfully ✅", isError: false);
@@ -691,6 +690,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     String? backendResume =
         user["resume"] ?? user["jobseekerProfile"]?["resume"];
+    String? resumeName = user["resumeOriginalName"];
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E27),
@@ -721,7 +721,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                   _infoRow("Phone", user["phone"]),
                   _infoRow("Location", user["location"]),
                   _infoRow("Gender", user["gender"]),
-                  _infoRow("Date of Birth", user["dateOfBirth"]),
+                  _infoRow(
+                    "Date of Birth",
+                    user["dateOfBirth"] != null
+                        ? user["dateOfBirth"].toString().split("T")[0]
+                        : "",
+                  ),
                 ]),
                 const SizedBox(height: 20),
 
@@ -1164,6 +1169,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildExperienceCard(Map<String, dynamic> exp) {
     return Container(
+      width: double.infinity, // 👈 ye add karna hai
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1194,7 +1200,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 4),
           Text(
-            "${exp["startDate"] ?? ""} - ${exp["endDate"] ?? "Present"}",
+            "${exp["startDate"] != null ? exp["startDate"].toString().split("T")[0] : ""} - "
+            "${exp["endDate"] != null ? exp["endDate"].toString().split("T")[0] : "Present"}",
             style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
           ),
           if (exp["description"] != null) ...[
@@ -1211,6 +1218,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildEducationCard(Map<String, dynamic> edu) {
     return Container(
+      width: double.infinity, // 👈 ye add kiya
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1380,6 +1388,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildExistingResume(String backendResume) {
+    final user = UserSession.user;
+    String? resumeName = user?["resumeOriginalName"];
+
     return Column(
       children: [
         Container(
@@ -1403,33 +1414,41 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+
+              // ✅ FIXED PART (NO CONST)
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Resume.pdf",
-                      style: TextStyle(
+                      resumeName ?? "Resume.pdf", // 👈 ORIGINAL NAME
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    Text(
+                    const Text(
                       "Uploaded document",
                       style: TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ],
                 ),
               ),
+
+              // 👁 VIEW
               IconButton(
                 icon: const Icon(Icons.visibility, color: Color(0xFF00D68F)),
                 onPressed: () async {
                   final url =
-                      "https://job-portal-fullstack-production.up.railway.app/api/uploads/resumes/$backendResume";
+                      "http://192.168.1.16:5000/uploads/resumes/$backendResume"; // ✅ FIXED URL
                   final uri = Uri.parse(url);
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 },
               ),
+
+              // 🔄 RE-UPLOAD
               IconButton(
                 icon: const Icon(Icons.upload, color: Color(0xFF00D68F)),
                 onPressed: () async {
