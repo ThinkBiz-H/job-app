@@ -522,7 +522,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     try {
       var request = http.MultipartRequest(
         "POST",
-        Uri.parse("http://192.168.1.16:5000/api/auth/upload-resume"),
+        Uri.parse(
+          "https://job-portal-web-979y.onrender.com/api/auth/upload-resume",
+        ),
       );
 
       request.headers["Authorization"] = "Bearer $token";

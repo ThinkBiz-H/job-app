@@ -72,7 +72,7 @@
 //     };
 
 //     final res = await http.put(
-//       Uri.parse("http://192.168.1.16:5000/api/users/update-profile"),
+//       Uri.parse("https://job-portal-web-979y.onrender.com/api/users/update-profile"),
 //       headers: {
 //         "Content-Type": "application/json",
 //         "Authorization": "Bearer ${UserSession.user?["token"]}",
@@ -534,7 +534,9 @@ class _EditProfileScreenState extends State<EditProfileScreen>
 
     try {
       final res = await http.put(
-        Uri.parse("http://192.168.1.16:5000/api/users/update-profile"),
+        Uri.parse(
+          "https://job-portal-web-979y.onrender.com/api/users/update-profile",
+        ),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer ${UserSession.user?["token"]}",

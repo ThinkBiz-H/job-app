@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = "http://192.168.1.16:5000/api";
+  static const String baseUrl = "https://job-portal-web-979y.onrender.com/api";
 
   /* ================= COMMON HEADERS ================= */
   static Map<String, String> _headers({String? token}) {
