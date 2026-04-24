@@ -1,433 +1,3 @@
-// import 'package:flutter/material.dart';
-// import 'dart:convert';
-// import 'package:file_picker/file_picker.dart';
-// import 'package:open_file/open_file.dart';
-// import 'package:url_launcher/url_launcher.dart';
-// import '../utils/user_session.dart';
-// import 'EditProfileScreen.dart';
-// import 'applied_jobs_screen.dart';
-// import 'package:http/http.dart' as http;
-// import 'dart:html' as html;
-
-// class ProfileScreen extends StatefulWidget {
-//   const ProfileScreen({super.key});
-
-//   @override
-//   State<ProfileScreen> createState() => _ProfileScreenState();
-// }
-
-// class _ProfileScreenState extends State<ProfileScreen> {
-//   PlatformFile? pickedFile;
-
-//   Future<void> pickResume() async {
-//     final result = await FilePicker.platform.pickFiles(
-//       type: FileType.custom,
-//       allowedExtensions: ['pdf'],
-//       withData: true, // 🔥 IMPORTANT
-//     );
-
-//     if (result != null) {
-//       setState(() {
-//         pickedFile = result.files.single;
-//       });
-//     }
-//   }
-
-//   void openLocalResume() async {
-//     if (pickedFile == null) return;
-
-//     // WEB case
-//     final bytes = pickedFile!.bytes;
-//     if (bytes != null) {
-//       final blob = html.Blob([bytes]);
-//       final url = html.Url.createObjectUrlFromBlob(blob);
-//       html.window.open(url, "_blank");
-//     }
-//   }
-
-//   Future<void> uploadResume() async {
-//     final token = UserSession.user?["token"];
-
-//     if (pickedFile == null || token == null) {
-//       print("No file or token");
-//       return;
-//     }
-
-//     try {
-//       var request = http.MultipartRequest(
-//         "POST",
-//         Uri.parse("https://job-portal-fullstack-production.up.railway.app/api/api/users/upload-resume"),
-//       );
-
-//       request.headers["Authorization"] = "Bearer $token";
-
-//       // 🔥 MAIN FIX (WEB)
-//       request.files.add(
-//         http.MultipartFile.fromBytes(
-//           "resume",
-//           pickedFile!.bytes!,
-//           filename: pickedFile!.name,
-//         ),
-//       );
-
-//       var response = await request.send();
-//       var responseData = await response.stream.bytesToString();
-
-//       print("UPLOAD RESPONSE: $responseData");
-
-//       final data = jsonDecode(responseData);
-
-//       if (data["success"] == true) {
-//         setState(() {
-//           // sirf resume update karo
-//           UserSession.user?["resume"] = data["resume"];
-//           pickedFile = null;
-//         });
-
-//         ScaffoldMessenger.of(
-//           context,
-//         ).showSnackBar(const SnackBar(content: Text("Resume Uploaded ✅")));
-//       }
-//     } catch (e) {
-//       print("ERROR: $e");
-//     }
-//   }
-
-//   Future<String?> _showInputDialog(String title) async {
-//     String value = "";
-
-//     return showDialog<String>(
-//       context: context,
-//       builder: (context) {
-//         return AlertDialog(
-//           title: Text(title),
-//           content: TextField(
-//             autofocus: true,
-//             onChanged: (val) => value = val,
-//             decoration: const InputDecoration(hintText: "Enter value"),
-//           ),
-//           actions: [
-//             TextButton(
-//               onPressed: () => Navigator.pop(context),
-//               child: const Text("Cancel"),
-//             ),
-//             ElevatedButton(
-//               onPressed: () => Navigator.pop(context, value),
-//               child: const Text("Add"),
-//             ),
-//           ],
-//         );
-//       },
-//     );
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final user = UserSession.user;
-
-//     if (user == null) {
-//       return const Scaffold(body: Center(child: Text("No Data ❌")));
-//     }
-
-//     final profile = (user["jobseekerProfile"] ?? {}) as Map<String, dynamic>;
-
-//     final skills = List<Map<String, dynamic>>.from(profile["skills"] ?? []);
-//     final experience = List<Map<String, dynamic>>.from(
-//       profile["experience"] ?? [],
-//     );
-//     final education = List<Map<String, dynamic>>.from(
-//       profile["educationDetails"] ?? [],
-//     );
-//     final certifications = List<Map<String, dynamic>>.from(
-//       profile["certifications"] ?? [],
-//     );
-//     final languages = List<Map<String, dynamic>>.from(
-//       profile["languages"] ?? [],
-//     );
-
-//     final updatedUser = UserSession.user;
-//     String? backendResume =
-//         updatedUser?["resume"] ?? updatedUser?["jobseekerProfile"]?["resume"];
-
-//     return Scaffold(
-//       appBar: AppBar(title: const Text("Profile")),
-//       body: SingleChildScrollView(
-//         padding: const EdgeInsets.all(12),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             /// IMAGE
-//             Center(child: _profileImage(user)),
-
-//             const SizedBox(height: 10),
-
-//             /// EDIT BUTTON
-//             ElevatedButton(
-//               onPressed: () async {
-//                 final updatedUser = await Navigator.push(
-//                   context,
-//                   MaterialPageRoute(
-//                     builder: (_) => EditProfileScreen(user: user),
-//                   ),
-//                 );
-
-//                 if (updatedUser != null) {
-//                   setState(() {
-//                     UserSession.user = updatedUser;
-//                   });
-//                 }
-//               },
-//               child: const Text("Edit Profile ✏️"),
-//             ),
-
-//             const SizedBox(height: 20),
-
-//             /// BASIC
-//             _title("Basic Info"),
-//             _item("Name", user["name"]),
-//             _item("Email", user["email"]),
-//             _item("Phone", user["phone"]),
-//             _item("Location", user["location"]),
-//             _item("Gender", user["gender"]),
-//             _item("DOB", user["dateOfBirth"]),
-
-//             const SizedBox(height: 20),
-
-//             /// SKILLS
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 _title("Skills"),
-//                 TextButton(
-//                   onPressed: () async {
-//                     final newSkill = await _showInputDialog("Add Skill");
-//                     if (newSkill != null && newSkill.isNotEmpty) {
-//                       setState(() {
-//                         skills.add({"name": newSkill});
-//                         UserSession.user?["jobseekerProfile"]["skills"] =
-//                             skills;
-//                       });
-//                     }
-//                   },
-//                   child: const Text("+ Add"),
-//                 ),
-//               ],
-//             ),
-
-//             if (skills.isEmpty) const Text("No Skills ❌"),
-
-//             Wrap(
-//               spacing: 8,
-//               children: skills.map((e) {
-//                 return Chip(
-//                   label: Text(e["name"]),
-//                   deleteIcon: const Icon(Icons.close),
-//                   onDeleted: () {
-//                     setState(() {
-//                       skills.remove(e);
-//                       UserSession.user?["jobseekerProfile"]["skills"] = skills;
-//                     });
-//                   },
-//                 );
-//               }).toList(),
-//             ),
-
-//             const SizedBox(height: 20),
-
-//             /// EXPERIENCE
-//             _title("Experience"),
-//             if (experience.isEmpty) const Text("No Experience ❌"),
-//             if (experience.isNotEmpty)
-//               ...experience.map(
-//                 (exp) => Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     _item("Company", exp["company"]),
-//                     _item("Position", exp["position"]),
-//                     _item("Start", exp["startDate"]),
-//                     _item("End", exp["endDate"]),
-//                     _item("Desc", exp["description"]),
-//                     const Divider(),
-//                   ],
-//                 ),
-//               ),
-
-//             const SizedBox(height: 20),
-
-//             /// EDUCATION
-//             _title("Education"),
-//             if (education.isEmpty) const Text("No Education ❌"),
-//             if (education.isNotEmpty)
-//               ...education.map(
-//                 (edu) => Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     _item("College", edu["college"]),
-//                     _item("Degree", edu["degree"]),
-//                     _item("Field", edu["field"]),
-//                     _item("Batch", edu["batch"]),
-//                     _item("Type", edu["type"]),
-//                     const Divider(),
-//                   ],
-//                 ),
-//               ),
-
-//             const SizedBox(height: 20),
-
-//             /// CERTIFICATIONS
-//             _title("Certifications"),
-//             if (certifications.isEmpty) const Text("No Certifications ❌"),
-//             if (certifications.isNotEmpty)
-//               ...certifications.map(
-//                 (c) => Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     _item("Name", c["name"]),
-//                     _item("Issuer", c["issuer"]),
-//                     _item("ID", c["credentialId"]),
-//                     _item("URL", c["url"]),
-//                     const Divider(),
-//                   ],
-//                 ),
-//               ),
-
-//             const SizedBox(height: 20),
-
-//             /// LANGUAGES
-//             _title("Languages"),
-//             if (languages.isEmpty) const Text("No Languages ❌"),
-//             if (languages.isNotEmpty)
-//               ...languages.map(
-//                 (lang) => _item(
-//                   "Language",
-//                   "${lang["language"]} (${lang["proficiency"]})",
-//                 ),
-//               ),
-
-//             const SizedBox(height: 20),
-//             ElevatedButton(
-//               onPressed: () {
-//                 Navigator.push(
-//                   context,
-//                   MaterialPageRoute(builder: (_) => const AppliedJobsScreen()),
-//                 );
-//               },
-//               child: const Text("View My Applications 📄"),
-//             ),
-
-//             /// RESUME
-//             _title("Resume"),
-//             const SizedBox(height: 10),
-
-//             // ✅ Backend resume (already uploaded)
-//             if (backendResume != null && backendResume.isNotEmpty)
-//               Card(
-//                 child: ListTile(
-//                   leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
-//                   title: const Text("View Resume"),
-//                   subtitle: Text(backendResume),
-//                   trailing: Row(
-//                     mainAxisSize: MainAxisSize.min,
-//                     children: [
-//                       // 👁 View
-//                       IconButton(
-//                         icon: const Icon(Icons.open_in_new),
-//                         onPressed: () async {
-//                           final url =
-//                               "https://job-portal-fullstack-production.up.railway.app/api/uploads/resumes/$backendResume";
-
-//                           final uri = Uri.parse(url);
-
-//                           await launchUrl(
-//                             uri,
-//                             mode: LaunchMode.externalApplication,
-//                           );
-//                         },
-//                       ),
-
-//                       // 🔄 Update Resume
-//                       IconButton(
-//                         icon: const Icon(Icons.upload),
-//                         onPressed: () async {
-//                           await pickResume();
-//                           await uploadResume(); // 🔥 upload call
-//                         },
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               )
-//             // ✅ Local file selected but not uploaded yet
-//             else if (pickedFile != null)
-//               Column(
-//                 children: [
-//                   ElevatedButton(
-//                     onPressed: openLocalResume,
-//                     child: const Text("View Local Resume"),
-//                   ),
-//                   const SizedBox(height: 10),
-
-//                   ElevatedButton(
-//                     onPressed: uploadResume,
-//                     child: const Text("Upload Resume 📄"),
-//                   ),
-//                 ],
-//               )
-//             // ❌ No resume at all
-//             else
-//               Column(
-//                 children: [
-//                   const Text("No Resume Available ❌"),
-//                   const SizedBox(height: 10),
-
-//                   ElevatedButton(
-//                     onPressed: () async {
-//                       await pickResume();
-//                       await uploadResume(); // 🔥 direct upload
-//                     },
-//                     child: const Text("Upload Resume 📄"),
-//                   ),
-//                 ],
-//               ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _profileImage(Map user) {
-//     try {
-//       final img = user["profileImage"];
-//       if (img != null && img.toString().contains("base64")) {
-//         final base64Str = img.split(",").last;
-//         return CircleAvatar(
-//           radius: 50,
-//           backgroundImage: MemoryImage(base64Decode(base64Str)),
-//         );
-//       }
-//     } catch (_) {}
-
-//     return const CircleAvatar(radius: 50, child: Icon(Icons.person));
-//   }
-
-//   Widget _title(String text) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: 8),
-//       child: Text(
-//         text,
-//         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-//       ),
-//     );
-//   }
-
-//   Widget _item(String label, dynamic value) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: 4),
-//       child: Text("$label : ${value ?? ""}"),
-//     );
-//   }
-// }
-
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
@@ -451,6 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   PlatformFile? pickedFile;
   bool isUploading = false;
+  bool isLoading = true;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -459,14 +30,17 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+
     _fadeAnimation = CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeOut,
     );
+
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
           CurvedAnimation(
@@ -474,7 +48,37 @@ class _ProfileScreenState extends State<ProfileScreen>
             curve: Curves.easeOutCubic,
           ),
         );
+
     _animationController.forward();
+
+    loadProfile(); // 👈 ADD THIS
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final token = UserSession.user?["token"];
+
+      final res = await http.get(
+        Uri.parse("https://job-portal-web-979y.onrender.com/api/auth/profile"),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      final data = jsonDecode(res.body);
+
+      if (res.statusCode == 200 && data["success"] == true) {
+        setState(() {
+          UserSession.user = data["user"];
+        });
+      }
+    } catch (e) {
+      print(e);
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -657,6 +261,12 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A0E27),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     final user = UserSession.user;
 
     if (user == null) {
@@ -1444,7 +1054,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 icon: const Icon(Icons.visibility, color: Color(0xFF00D68F)),
                 onPressed: () async {
                   final url =
-                      "http://192.168.1.16:5000/uploads/resumes/$backendResume"; // ✅ FIXED URL
+                      "https://job-portal-web-979y.onrender.com/uploads/resumes/$backendResume"; // ✅ FIXED URL
                   final uri = Uri.parse(url);
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 },

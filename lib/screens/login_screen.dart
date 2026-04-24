@@ -427,6 +427,7 @@ import '../utils/user_session.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 import 'dart:ui';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -479,18 +480,64 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  // void handleLogin() async {
+  //   if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: const Text("Enter email & password"),
+  //         behavior: SnackBarBehavior.floating,
+  //         backgroundColor: Colors.red.shade400,
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(12),
+  //         ),
+  //       ),
+  //     );
+  //     return;
+  //   }
+
+  //   setState(() => isLoading = true);
+
+  //   final res = await ApiService.login(
+  //     email: emailController.text.trim(),
+  //     password: passwordController.text.trim(),
+  //   );
+
+  //   setState(() => isLoading = false);
+
+  //   if (res != null && res["success"] == true) {
+  //     final data = res["data"];
+  //     final token = res["token"] ?? data?["token"];
+  //     final user = data?["user"] ?? data;
+
+  //     if (user != null && token != null) {
+  //       UserSession.user = {...user, "token": token};
+
+  //       if (!mounted) return;
+  //       Navigator.pushReplacement(
+  //         context,
+  //         MaterialPageRoute(builder: (_) => const HomeScreen()),
+  //       );
+  //     }
+  //   } else {
+  //     if (!mounted) return;
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: const Text("Login Failed ❌"),
+  //         behavior: SnackBarBehavior.floating,
+  //         backgroundColor: Colors.red.shade400,
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(12),
+  //         ),
+  //       ),
+  //     );
+  //   }
+  // }
+
   void handleLogin() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Enter email & password"),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red.shade400,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: const Text("Enter email & password")));
       return;
     }
 
@@ -509,9 +556,16 @@ class _LoginScreenState extends State<LoginScreen>
       final user = data?["user"] ?? data;
 
       if (user != null && token != null) {
+        // user session
         UserSession.user = {...user, "token": token};
 
+        // 🔥 SAVE LOGIN
+        final prefs = await SharedPreferences.getInstance();
+
+        await prefs.setString("token", token);
+
         if (!mounted) return;
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -519,16 +573,10 @@ class _LoginScreenState extends State<LoginScreen>
       }
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Login Failed ❌"),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red.shade400,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: const Text("Login Failed ❌")));
     }
   }
 

@@ -20,7 +20,7 @@ dependencies:
   # 🔥 ADD THESE
   file_picker: ^8.0.0
   open_file: ^3.3.2
-
+  shared_preferences: ^2.2.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
